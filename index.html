@@ -143,7 +143,7 @@ window.THEME = {
   ribbonCount: 3,
   ribbonWidth: 2.6,
   glow: 0.85,
-  particles: { standard: 64, reduced: 26 },
+  particles: { standard: 48, reduced: 22 },
   revealMs: 1400,
   portrait: { title: "Light Portrait", footer: "Your brand", textColour: "#FFF6EC", border: "thin" }
 };
@@ -247,7 +247,7 @@ const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
 const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 /* ---------- theme ---------- */
-const DEF = { palette: ["#FFB86B", "#FF7A9C", "#C792FF", "#7FD6FF", "#FFE9C7"], backgroundTint: "#1A1220", ribbonCount: 3, ribbonWidth: 2.6, glow: 0.85, particles: { standard: 64, reduced: 26 }, revealMs: 1400, portrait: { title: "Light Portrait", footer: "Your brand", textColour: "#FFF6EC", border: "thin" } };
+const DEF = { palette: ["#FFB86B", "#FF7A9C", "#C792FF", "#7FD6FF", "#FFE9C7"], backgroundTint: "#1A1220", ribbonCount: 3, ribbonWidth: 2.6, glow: 0.85, particles: { standard: 48, reduced: 22 }, revealMs: 1400, portrait: { title: "Light Portrait", footer: "Your brand", textColour: "#FFF6EC", border: "thin" } };
 function isHex(v) { return typeof v === "string" && v.charAt(0) === "#" && (v.length === 4 || v.length === 7 || v.length === 9) && !isNaN(parseInt(v.slice(1), 16)); }
 function readTheme() {
   const t = window.THEME || {}, o = JSON.parse(JSON.stringify(DEF));
@@ -412,14 +412,15 @@ function makeSprites() {
   FX.sprites = TH.palette.map(function (c) {
     const s = document.createElement("canvas"); s.width = s.height = 64;
     const g = s.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gr.addColorStop(0, rgba(c, 1)); gr.addColorStop(0.3, rgba(c, 0.6)); gr.addColorStop(1, rgba(c, 0));
+    gr.addColorStop(0, rgba(c, 0.9)); gr.addColorStop(0.25, rgba(c, 0.45)); gr.addColorStop(1, rgba(c, 0));
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     return s;
   });
 }
 function makeParts(n) {
   FX.parts = [];
-  for (let i = 0; i < n; i++) FX.parts.push({ a: Math.random() * Math.PI * 2, r: 1.0 + Math.random() * 1.5, y: Math.random(), v: 0.03 + Math.random() * 0.07, s: 0.4 + Math.random() * 1.6, c: i % TH.palette.length, tw: Math.random() * 6.28 });
+  const NP = TH.palette.length, warm = [0, 0, 0, 4 % NP, 4 % NP, 1 % NP, 2 % NP];
+  for (let i = 0; i < n; i++) FX.parts.push({ a: Math.random() * Math.PI * 2, r: 1.0 + Math.random() * 1.5, y: Math.random(), v: 0.03 + Math.random() * 0.07, s: 0.4 + Math.random() * 1.6, c: warm[i % warm.length], tw: Math.random() * 6.28 });
 }
 makeSprites();
 function clock(now) { return (now - FX.t0) / 1000 * (reduceMotion ? 0.45 : 1); }
@@ -435,12 +436,15 @@ function ovalPath(c, sh, k) {
   for (let i = 1; i < n; i++) c.lineTo(sh.cx + (p[i * 2] - sh.cx) * k, sh.cy + (p[i * 2 + 1] - sh.cy) * k);
   c.closePath();
 }
-function ribbonPath(c, sh, k, amp, ph, fr) {
+function ribbonPath(c, sh, k, amp, ph, fr, mix) {
   const n = sh.n, p = sh.pts;
   if (TMP.length < n * 2) TMP = new Float32Array(n * 2);
   for (let i = 0; i < n; i++) {
     const a = i / n * Math.PI * 2, w = k * (1 + amp * Math.sin(a * fr + ph));
-    TMP[i * 2] = sh.hx + (p[i * 2] - sh.cx) * w; TMP[i * 2 + 1] = sh.hy + (p[i * 2 + 1] - sh.cy) * w * 1.08;
+    const dx = p[i * 2] - sh.cx, dy = p[i * 2 + 1] - sh.cy, th = Math.atan2(dy / sh.ry, dx / sh.rx);
+    const cxp = sh.hx + dx * w, cyp = sh.hy + dy * w * 1.08;
+    const exp = sh.hx + Math.cos(th) * sh.rx * w, eyp = sh.hy + Math.sin(th) * sh.ry * w * 1.08;
+    TMP[i * 2] = cxp + (exp - cxp) * mix; TMP[i * 2 + 1] = cyp + (eyp - cyp) * mix;
   }
   c.beginPath();
   c.moveTo((TMP[(n - 1) * 2] + TMP[0]) / 2, (TMP[(n - 1) * 2 + 1] + TMP[1]) / 2);
@@ -477,7 +481,7 @@ function drawRibbons(c, sh, t, rv, pre, sc, q) {
     const amp = 0.02 + 0.012 * r + mv + rv * 0.018;
     const dir = r % 2 ? -1 : 1;
     const ph = t * (0.8 + r * 0.3) * dir + r * 1.9;
-    ribbonPath(c, sh, k, amp, ph, 3 + r);
+    ribbonPath(c, sh, k, amp, ph, 3 + r, Math.min(0.85, 0.35 + 0.18 * r + 0.3 * rv));
     const a = sh.rx * k, b = sh.ry * k * 1.08, L = Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
     const unit = L / 2, seg = unit * (0.5 + 0.2 * rv), small = unit * 0.1, rest = Math.max(unit * 0.08, unit - seg - small);
     c.setLineDash([seg, rest * 0.6, small, rest * 0.4]);
@@ -510,7 +514,7 @@ function drawParticles(c, sh, t, rv, sc, q, R) {
     const inside = ex * ex + ey * ey < 1 ? 0.15 : 1;
     const fade = Math.sin(life * Math.PI), tw = 0.6 + 0.4 * Math.sin(t * 2.1 + p.tw);
     const s = (7 + p.s * 13) * sc * (0.75 + 0.55 * rv);
-    c.globalAlpha = fade * tw * (0.3 + 0.55 * rv) * inside;
+    c.globalAlpha = fade * tw * (0.25 + 0.45 * rv) * inside;
     c.drawImage(FX.sprites[p.c % FX.sprites.length], x - s / 2, y - s / 2, s, s);
   }
   c.globalAlpha = 1;
