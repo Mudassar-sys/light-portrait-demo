@@ -206,6 +206,7 @@ window.THEME = {
       if (s.capture.url && s.capture.url !== lastUrl) { $("shot").src = s.capture.url; lastUrl = s.capture.url; }
       $("shareBtn").hidden = !s.capture.canShareFile;
       $("saveBtn").hidden = !!s.isIOS;
+      $("saveBtn").className = s.capture.canShareFile ? "btn ghost" : "btn primary";
       $("iosSave").hidden = !s.isIOS;
     } else if (lastUrl && s.phase !== "error") { $("shot").removeAttribute("src"); lastUrl = null; }
     if (s.phase === "error") {
@@ -785,7 +786,9 @@ function trigger(src) {
 }
 
 /* ---------- capture: freeze one frame, render the same scene and mapping into an export canvas ---------- */
-let cdTimer = 0, lastBlobUrl = null, lastFile = null, exportMs = 0, exportSteps = "", exporting = false;
+let cdTimer = 0, lastBlobUrl = null, lastFile = null, lastName = "light-portrait.jpg", exportMs = 0, exportSteps = "", exporting = false;
+function two(n) { return (n < 10 ? "0" : "") + n; }
+function shotName() { const d = new Date(); return "light-portrait-" + d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + "-" + two(d.getHours()) + two(d.getMinutes()) + two(d.getSeconds()) + ".jpg"; }
 function cancelCountdown() { if (cdTimer) { clearTimeout(cdTimer); cdTimer = 0; } }
 function capture() {
   if (S.phase !== "revealed") return;
@@ -837,7 +840,8 @@ async function doCapture() {
     exportSteps = "video " + Math.round(tA - now) + " scene " + Math.round(tB - tA) + " brand " + Math.round(tC - tB) + " encode " + Math.round(tD - tC);
     releaseShot();
     lastBlobUrl = URL.createObjectURL(blob);
-    try { lastFile = new File([blob], "light-portrait.jpg", { type: "image/jpeg" }); } catch (e) { lastFile = null; }
+    lastName = shotName();
+    try { lastFile = new File([blob], lastName, { type: "image/jpeg" }); } catch (e) { lastFile = null; }
     const url = dataUrl;
     ec.width = 0; ec.height = 0;
     let canShare = false;
@@ -863,9 +867,10 @@ function save() {
   if (isIOS) { toast("Press and hold the image, then tap Save to Photos."); return; }
   if (!lastBlobUrl) return;
   const a = document.createElement("a");
-  a.href = lastBlobUrl; a.download = "light-portrait.jpg"; a.rel = "noopener";
+  a.href = lastBlobUrl; a.download = lastName; a.rel = "noopener";
   document.body.appendChild(a); a.click();
   setTimeout(function () { a.remove(); }, 0);
+  toast(isAndroid ? "Saved. Open your Gallery and look in the Download album." : "Saved to your Downloads folder.");
 }
 
 /* ---------- lifecycle ---------- */
