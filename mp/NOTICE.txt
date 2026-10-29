@@ -1,0 +1,13 @@
+Third-party components served from this folder
+
+MediaPipe Tasks Vision 1.1.1 (vision_bundle.mjs and wasm/*)
+Copyright Google LLC. Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+Source: https://www.npmjs.com/package/@mediapipe/tasks-vision
+
+MediaPipe Face Landmarker model (models/face_landmarker_float16_v1.task)
+Copyright Google LLC. Licensed under the Apache License, Version 2.0.
+Source: https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker
+
+qrcode-generator 1.4.4 (../lib/qrcode-1.4.4.js)
+Copyright (c) 2009 Kazuhiko Arase. Licensed under the MIT license (header retained in the file).
